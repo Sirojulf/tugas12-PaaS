@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 )
 
 type Kelompok3 struct {
@@ -39,6 +40,11 @@ func main() {
 		{"Syahratul Muthi’ah M. Masiming", "1304211013"},
 	}
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	kelompokHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -51,8 +57,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/kelompok", loggingMiddleware(corsMiddleware(kelompokHandler)))
 
-	log.Printf("Server running port 8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Fatalf("Could not start :8080 %v\n", err)
+	log.Printf("Server running port %s", port)
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Fatalf("Could not start server on port %s: %v\n", port, err)
 	}
 }
