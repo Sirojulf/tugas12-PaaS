@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Kelompok3 struct {
@@ -27,8 +28,13 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		start := time.Now()
+		log.Printf("[START] %s %s %s", r.RemoteAddr, r.Method, r.URL.Path)
+
 		next.ServeHTTP(w, r)
+
+		duration := time.Since(start)
+		log.Printf("[END] %s %s %s - Duration: %v", r.RemoteAddr, r.Method, r.URL.Path, duration)
 	})
 }
 
@@ -51,13 +57,21 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(kelompok)
+		if err := json.NewEncoder(w).Encode(kelompok); err != nil {
+			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
+		}
+	})
+
+	healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
 	})
 
 	mux := http.NewServeMux()
 	mux.Handle("/kelompok", loggingMiddleware(corsMiddleware(kelompokHandler)))
+	mux.Handle("/health", healthHandler)
 
-	log.Printf("Server running port %s", port)
+	log.Printf("Server running on port %s", port)
 	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatalf("Could not start server on port %s: %v\n", port, err)
 	}
